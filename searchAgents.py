@@ -463,8 +463,43 @@ def foodHeuristic(state: Tuple[Tuple, List[List]], problem: FoodSearchProblem):
     problem.heuristicInfo['wallCount']
     """
     position, foodGrid = state
-    "*** YOUR CODE HERE ***"
-    return 0
+    foodList = foodGrid.asList()
+    if not foodList:
+        return 0
+
+    if 'dist_cache' not in problem.heuristicInfo:
+        problem.heuristicInfo['dist_cache'] = {}
+    dist_cache = problem.heuristicInfo['dist_cache']
+    walls = problem.walls
+    from collections import deque
+
+    def getDist(p1, p2):
+        if p1 == p2:
+            return 0
+        key = (p1, p2) if p1 < p2 else (p2, p1)
+        if key in dist_cache:
+            return dist_cache[key]
+        queue = deque([p1])
+        dist = {p1: 0}
+        while queue:
+            curr = queue.popleft()
+            x, y = curr
+            for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+                nxt = (x + dx, y + dy)
+                if not walls[nxt[0]][nxt[1]] and nxt not in dist:
+                    dist[nxt] = dist[curr] + 1
+                    queue.append(nxt)
+        for target, d in dist.items():
+            k = (p1, target) if p1 < target else (target, p1)
+            dist_cache[k] = d
+        return dist_cache.get(key, 999999)
+
+    if len(foodList) == 1:
+        return getDist(position, foodList[0])
+
+    f1 = max(foodList, key=lambda f: getDist(position, f))
+    f2 = max(foodList, key=lambda f: getDist(f1, f))
+    return min(getDist(position, f1), getDist(position, f2)) + getDist(f1, f2)
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
