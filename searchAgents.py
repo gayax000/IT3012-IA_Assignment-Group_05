@@ -454,24 +454,22 @@ def foodHeuristic(state: Tuple[Tuple, List[List]], problem: FoodSearchProblem):
     problem.heuristicInfo['wallCount']
     """
     position, foodGrid = state
-    foods = foodGrid.asList()
-    if not foods:
+    foodList = foodGrid.asList()
+    if not foodList:
         return 0
 
     if 'dist_cache' not in problem.heuristicInfo:
         problem.heuristicInfo['dist_cache'] = {}
-
     dist_cache = problem.heuristicInfo['dist_cache']
     walls = problem.walls
-
     from collections import deque
 
-    def get_maze_distance(p1, p2):
+    def getDist(p1, p2):
         if p1 == p2:
             return 0
-        if (p1, p2) in dist_cache:
-            return dist_cache[(p1, p2)]
-
+        key = (p1, p2) if p1 < p2 else (p2, p1)
+        if key in dist_cache:
+            return dist_cache[key]
         queue = deque([p1])
         dist = {p1: 0}
         while queue:
@@ -483,11 +481,16 @@ def foodHeuristic(state: Tuple[Tuple, List[List]], problem: FoodSearchProblem):
                     dist[nxt] = dist[curr] + 1
                     queue.append(nxt)
         for target, d in dist.items():
-            dist_cache[(p1, target)] = d
-            dist_cache[(target, p1)] = d
-        return dist_cache.get((p1, p2), 999999)
+            k = (p1, target) if p1 < target else (target, p1)
+            dist_cache[k] = d
+        return dist_cache.get(key, 999999)
 
-    return max(get_maze_distance(position, f) for f in foods)
+    if len(foodList) == 1:
+        return getDist(position, foodList[0])
+
+    f1 = max(foodList, key=lambda f: getDist(position, f))
+    f2 = max(foodList, key=lambda f: getDist(f1, f))
+    return min(getDist(position, f1), getDist(position, f2)) + getDist(f1, f2)
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
